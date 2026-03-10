@@ -21,15 +21,15 @@ resource "aws_s3_bucket" "bucket" {
 
 // ECR repository for application
 
-resource "aws_ecr_repository" "image_repo" {
-  name                 = "node-devops-app-repo"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
+# resource "aws_ecr_repository" "image_repo" {
+#   name                 = "node-devops-app-repo"
+#   image_tag_mutability = "MUTABLE"
+#   force_delete         = true
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-}
+#   image_scanning_configuration {
+#     scan_on_push = true
+#   }
+# }
 
 
 // Application Security Group for the service
