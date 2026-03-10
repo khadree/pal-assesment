@@ -37,16 +37,30 @@ let pgReady    = false;
 
 redisClient.on('ready',  () => { redisReady = true;  console.log('[redis] connected'); });
 redisClient.on('error',  (err) => { redisReady = false; console.error('[redis] error:', err.message); });
-redisClient.connect().catch(console.error);
+if (process.env.NODE_ENV !== 'test') {
 
-pgPool.on('connect', () => { pgReady = true; console.log('[postgres] client connected'); });
-pgPool.on('error',   (err) => { console.error('[postgres] idle client error:', err.message); });
+  redisClient.connect().catch(console.error);
 
-// Warm up postgres connection
-pgPool.query('SELECT 1')
-  .then(() => { pgReady = true; console.log('[postgres] ready'); })
-  .catch((err) => console.error('[postgres] initial connect failed:', err.message));
+  pgPool.on('connect', () => {
+    pgReady = true;
+    console.log('[postgres] client connected');
+  });
 
+  pgPool.on('error', (err) => {
+    console.error('[postgres] idle client error:', err.message);
+  });
+
+  // Warm up postgres connection
+  pgPool.query('SELECT 1')
+    .then(() => {
+      pgReady = true;
+      console.log('[postgres] ready');
+    })
+    .catch((err) =>
+      console.error('[postgres] initial connect failed:', err.message)
+    );
+
+}
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 /**
