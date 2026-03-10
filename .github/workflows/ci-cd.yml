@@ -25,6 +25,12 @@ jobs:
         run: |
           cd app
           npm test
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
