@@ -1,0 +1,29 @@
+{
+  "name": "devops-node-app",
+  "version": "1.0.0",
+  "description": "Production-ready Node.js app with full DevOps pipeline",
+  "main": "src/app.js",
+  "scripts": {
+    "start":   "node src/app.js",
+    "dev":     "nodemon src/app.js",
+    "test":    "jest --forceExit --coverage",
+    "lint":    "eslint src/**/*.js",
+    "format":  "prettier --write \"src/**/*.js\""
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg":      "^8.11.3",
+    "redis":   "^4.6.10"
+  },
+  "devDependencies": {
+    "eslint":       "^8.55.0",
+    "jest":         "^29.7.0",
+    "nodemon":      "^3.0.2",
+    "prettier":     "^3.1.1",
+    "supertest":    "^6.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}

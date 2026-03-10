@@ -1,0 +1,110 @@
+# ════════════════════════════════════════════════════════════════
+#  docker-compose.yml  —  local development & staging stack
+
+
+
+
+
+services:
+
+  # ── Application ──────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: devops-node-app
+    container_name: devops_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"           # Direct access (dev convenience)
+    environment:
+      NODE_ENV:          ${NODE_ENV:-production}
+      PORT:              3000
+      POSTGRES_HOST:     postgres
+      POSTGRES_PORT:     5432
+      POSTGRES_DB:       ${POSTGRES_DB:-mydatabase}
+      POSTGRES_USER:     ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?-mypassword}
+
+      # Redis
+      REDIS_HOST:        redis
+      REDIS_PORT:        6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - swiftride-net
+    healthcheck:
+      test:         ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval:     30s
+      timeout:      5s
+      start_period: 15s
+      retries:      3
+    # Read-only root FS; only /tmp is writable (principle of least privilege)
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus:   "1.0"
+          memory: 256M
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: my-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - swiftride-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # ── Redis ─────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: my-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass mysecretpassword --appendonly yes
+    networks:
+      - swiftride-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "mysecretpassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  swiftride-net:
+    external: true
+    # driver: bridge
+    # Isolate services from the default bridge; only explicitly attached
+    # containers can communicate with each other.
