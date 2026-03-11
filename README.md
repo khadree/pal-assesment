@@ -1,4 +1,4 @@
-# 🚀 DevOps Pipeline — Node.js Web Application
+# DevOps Pipeline — Node.js Web Application
 
 A production-ready Node.js application with a complete DevOps pipeline covering containerisation, CI/CD, security scanning, and zero-downtime deployments.
 
@@ -7,8 +7,7 @@ A production-ready Node.js application with a complete DevOps pipeline covering 
 ## Architecture
 
 ```
-Internet → Nginx (port 80) → Node.js App (port 3000) → PostgreSQL
-                                                       → Redis
+Internet → Node.js App (port 3000) → PostgreSQL   → Redis
 ```
 
 | Service  | Image               | Purpose                     |
@@ -25,7 +24,7 @@ Internet → Nginx (port 80) → Node.js App (port 3000) → PostgreSQL
 ### Quick Start
 
 ```bash
-# 1. Clone and configure
+# 1. Clone and configure to build locally
 First create a docker network with this command
 docker network create swiftride-net
 # Edit .env with strong passwords
