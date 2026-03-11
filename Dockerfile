@@ -33,6 +33,11 @@ RUN apk add --no-cache dumb-init && \
     mkdir -p /app && \
     chown -R node:node /app
 
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /opt/yarn-v1.22.22
+
 WORKDIR /app
 
 # Copy pruned production node_modules from previous stage
