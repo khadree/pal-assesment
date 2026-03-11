@@ -27,6 +27,7 @@ RUN npm prune --production
 
 FROM node:22-alpine AS runtime
 
+RUN apk update && apk upgrade zlib && rm -rf /var/cache/apk/*
 
 RUN apk add --no-cache dumb-init && \
     mkdir -p /app && \
