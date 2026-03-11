@@ -10,7 +10,7 @@ WORKDIR /build
 COPY package*.json ./
 
 # Install ALL deps (including devDeps) so tests can run in CI if needed
-RUN npm ci --prefer-offline
+RUN npm install --prefer-offline
 
 
 
