@@ -1,6 +1,5 @@
 
-# ── Stage 1: dependency installation ─────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 # Install system packages needed to compile native add-ons (pg, etc.)
 RUN apk add --no-cache python3 make g++
@@ -14,8 +13,8 @@ COPY package*.json ./
 RUN npm ci --prefer-offline
 
 
-# ── Stage 2: production dependency pruning ────────────────────────
-FROM node:20-alpine AS prod-deps
+
+FROM node:22-alpine AS prod-deps
 
 WORKDIR /build
 COPY package*.json ./
@@ -25,12 +24,10 @@ COPY --from=deps /build/node_modules ./node_modules
 RUN npm prune --production
 
 
-# ── Stage 3: final runtime image ──────────────────────────────────
-FROM node:20-alpine AS runtime
+
+FROM node:22-alpine AS runtime
 
 
-# ── Security: drop all unneeded capabilities, run as non-root ────
-# 'node' user (uid 1000) already exists in node:alpine images
 RUN apk add --no-cache dumb-init && \
     mkdir -p /app && \
     chown -R node:node /app
