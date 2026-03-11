@@ -21,15 +21,20 @@ resource "aws_s3_bucket" "bucket" {
 
 // ECR repository for application
 
-# resource "aws_ecr_repository" "image_repo" {
-#   name                 = "node-devops-app-repo"
-#   image_tag_mutability = "MUTABLE"
-#   force_delete         = true
+resource "aws_ecr_repository" "image_repo" {
+  name                 = "node-devops-app-repo"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
-#   image_scanning_configuration {
-#     scan_on_push = true
-#   }
-# }
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+import {
+  to = aws_ecr_repository.image_repo
+  id = "node-devops-app-repo"
+}
 
 
 // Application Security Group for the service
@@ -42,7 +47,7 @@ resource "aws_security_group" "app_sg" {
     from_port       = 3000
     to_port         = 3000
     protocol        = "tcp"
-    security_groups = [aws_security_group.lb_sg.id]
+    security_groups = [aws_security_group.alb_sg.id]
   }
 
   egress {
@@ -72,7 +77,7 @@ resource "aws_lb_target_group" "vprofile_TG" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
+  cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
   tags = {
@@ -82,7 +87,7 @@ resource "aws_vpc" "main" {
 
 # Internet Gateway
 resource "aws_internet_gateway" "this" {
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.main
   tags   = { Name = "devops-vpc-igw" }
 }
 
@@ -91,13 +96,13 @@ resource "aws_internet_gateway" "this" {
 # Public Subnets
 resource "aws_subnet" "public" {
   count                   = length(local.azs)
-  vpc_id                  = aws_vpc.this.id
+  vpc_id                  = aws_vpc.main.id
   cidr_block              = local.public_subnets[count.index]
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
 
   tags = {
-    Name      = "dev-vpc-public-${count.index + 1}"
+    Name = "dev-vpc-public-${count.index + 1}"
 
   }
 }
@@ -105,13 +110,13 @@ resource "aws_subnet" "public" {
 # Private Subnets
 resource "aws_subnet" "private" {
   count             = length(local.azs)
-  vpc_id            = aws_vpc.this.id
+  vpc_id            = aws_vpc.main.id
   cidr_block        = local.private_subnets[count.index]
   availability_zone = local.azs[count.index]
 
   tags = {
-    Name   = "dev-vpc-private-${count.index + 1}"
-    
+    Name = "dev-vpc-private-${count.index + 1}"
+
   }
 }
 
@@ -134,7 +139,7 @@ resource "aws_nat_gateway" "this" {
 
 # Public Route Table
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.this.id
@@ -151,7 +156,7 @@ resource "aws_route_table_association" "public" {
 # Private Route Tables (one per AZ)
 resource "aws_route_table" "private" {
   count  = length(local.azs)
-  vpc_id = aws_vpc.this.id
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.this[count.index].id
@@ -166,24 +171,24 @@ resource "aws_route_table_association" "private" {
 }
 // Load balancer Security Group
 resource "aws_security_group" "alb_sg" {
-
-  name = "alb-security-group"
-  vpc_id = aws_vpc.main.id
+  name        = "vprofile-ELB"
+  description = "Security group for the Load balance"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
 
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
 
   }
 
   ingress {
 
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
 
   }
@@ -208,8 +213,8 @@ resource "aws_lb" "vprofileLB" {
   name               = "VprofileLB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.lb_sg.id]
- subnets = [for s in data.aws_subnet.selected : s.id]
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [for s in aws_subnet.public : s.id]
 }
 
 
@@ -253,7 +258,7 @@ resource "aws_iam_role_policy" "secrets_access" {
 }
 
 resource "aws_secretsmanager_secret" "app_secrets" {
-  name = "prod/secret"   
+  name = "prod/secret"
 }
 resource "aws_iam_role" "ecs_task_role" {
   name = "ecsTaskRole"
@@ -280,12 +285,12 @@ resource "aws_cloudwatch_log_group" "vprofile_log_group" {
 # Create Task Definition
 resource "aws_ecs_task_definition" "vprofile" {
   family                   = "vprofile-task"
-  network_mode             = "awsvpc" 
+  network_mode             = "awsvpc"
   cpu                      = "2048"
   memory                   = "4096"
   requires_compatibilities = ["FARGATE"]
-  execution_role_arn = aws_iam_role.ecs_execution_role.arn
-  task_role_arn      = aws_iam_role.ecs_task_role.arn  
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -306,8 +311,8 @@ resource "aws_ecs_task_definition" "vprofile" {
         { name = "POSTGRES_PORT", value = "5432" },
         { name = "REDIS_PORT", value = "6379" },
         { name = "PORT", value = "3000" }
-      ]  
-        secrets = [
+      ]
+      secrets = [
         {
           name      = "POSTGRES_PASSWORD"
           valueFrom = "arn:aws:secretsmanager:us-east-1:114725187682:secret:prod/secret-ZSpUkK:POSTGRES_PASSWORD::"
@@ -332,7 +337,7 @@ resource "aws_ecs_task_definition" "vprofile" {
           name      = "REDIS_PASSWORD"
           valueFrom = "arn:aws:secretsmanager:us-east-1:114725187682:secret:prod/secret-ZSpUkK:REDIS_PASSWORD::"
         }
-        ]
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -361,7 +366,7 @@ resource "aws_ecs_service" "vprofile" {
   deployment_maximum_percent         = 200
 
   network_configuration {
-   subnets = [for s in data.aws_subnet.selected : s.id]
+    subnets          = [for s in aws_subnet.private : s.id]
     security_groups  = [aws_security_group.app_sg.id]
     assign_public_ip = true
   }
@@ -378,21 +383,21 @@ resource "aws_ecs_service" "vprofile" {
 
 
 #### Attach s3 to code build for artifact
-resource "aws_iam_role_policy" "codebuild_s3_policy" {
-  role = aws_iam_role.codebuild_role.name
+# resource "aws_iam_role_policy" "codebuild_s3_policy" {
+#   role = aws_iam_role.codebuild_role.name
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-          "s3:PutObject"
-        ]
-        Resource = "arn:aws:s3:::vprofile-artifact-bucket-my-2025/*"
-      }
-    ]
-  })
-}
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "s3:GetObject",
+#           "s3:GetObjectVersion",
+#           "s3:PutObject"
+#         ]
+#         Resource = "arn:aws:s3:::vprofile-artifact-bucket-my-2025/*"
+#       }
+#     ]
+#   })
+# }

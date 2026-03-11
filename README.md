@@ -16,7 +16,7 @@ Internet → Nginx (port 80) → Node.js App (port 3000) → PostgreSQL
 | app      | node:20-alpine      | Express API                 |
 | postgres | postgres:16-alpine  | Persistent storage          |
 | redis    | redis:7-alpine      | Cache & session store       |
-| nginx    | nginx:1.25-alpine   | Reverse proxy / rate limit  |
+
 
 ---
 
@@ -26,7 +26,8 @@ Internet → Nginx (port 80) → Node.js App (port 3000) → PostgreSQL
 
 ```bash
 # 1. Clone and configure
-cp .env.example .env
+First create a docker network with this command
+docker network create swiftride-net
 # Edit .env with strong passwords
 
 # 2. Start the full stack
@@ -54,7 +55,7 @@ curl -X POST http://localhost/process \
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and set all values before running.
+ `.env` and set all values before running.
 
 | Variable           | Default        | Description              |
 |--------------------|----------------|--------------------------|
@@ -163,10 +164,8 @@ npm test
 .
 ├── src/
 │   └── app.js                   # Express application
-├── tests/
+├── app/
 │   └── app.test.js              # Jest integration tests
-├── nginx/
-│   └── nginx.conf               # Reverse proxy config
 ├── .github/
 │   └── workflows/
 │       └── ci-cd.yml            # GitHub Actions pipeline
@@ -183,13 +182,12 @@ npm test
 
 ## Security Checklist
 
-- [x] Non-root container user
-- [x] Read-only root filesystem
-- [x] `no-new-privileges` security option
-- [x] Resource limits (CPU + memory) on all services
-- [x] Secrets via environment variables (never baked into image)
-- [x] Nginx rate limiting (10 req/s per IP)
-- [x] Security headers (X-Frame-Options, CSP, etc.)
-- [x] Trivy CVE scan blocks on CRITICAL/HIGH
-- [x] `.dockerignore` excludes `.env`, tests, and dev files
-- [x] Postgres initialised with least-privilege `readonly` role
+- Non-root container user
+-  Read-only root filesystem
+-  `no-new-privileges` security option
+- Resource limits (CPU + memory) on all services
+- Secrets via environment variables (never baked into image)
+- Security headers (X-Frame-Options, CSP, etc.)
+- Trivy CVE scan blocks on CRITICAL/HIGH
+- `.dockerignore` excludes `.env`, tests, and dev files
+- Postgres initialised with least-privilege `readonly` role
